@@ -1,0 +1,174 @@
+--Reformat the final_assignments_qa to look like the final_assignments table, 
+--filling in any missing values with a placeholder of the appropriate data type.
+
+
+SELECT
+  item_id,
+  test_a AS test_assignment,
+  (CASE WHEN test_a IS NOT NULL THEN 'test_a'
+  ELSE NULL
+  END) AS test_number,
+  (CASE WHEN test_a IS NOT NULL THEN DATE('2013-01-05')
+  ELSE NULL
+  END) AS test_start_date
+FROM
+  dsv1069.final_assignments_qa
+UNION
+SELECT
+  item_id,
+  test_b AS test_assignment,
+  (CASE WHEN test_b IS NOT NULL THEN 'test_b'
+  ELSE NULL
+  END) AS test_number,
+  (CASE WHEN test_b IS NOT NULL THEN DATE('2013-01-05')
+  ELSE NULL
+  END) AS test_start_date
+FROM
+  dsv1069.final_assignments_qa
+UNION
+SELECT
+  item_id,
+  test_c AS test_assignment,
+  (CASE WHEN test_c IS NOT NULL THEN 'test_c'
+  ELSE NULL
+  END) AS test_number,
+  (CASE WHEN test_c IS NOT NULL THEN DATE('2013-01-05')
+  ELSE NULL
+  END) AS test_start_date
+FROM
+  dsv1069.final_assignments_qa
+UNION
+SELECT
+  item_id,
+  test_d AS test_assignment,
+  (CASE WHEN test_d IS NOT NULL THEN 'test_d'
+  ELSE NULL
+  END) AS test_number,
+  (CASE WHEN test_d IS NOT NULL THEN DATE('2013-01-05')
+  ELSE NULL
+  END) AS test_start_date
+FROM
+  dsv1069.final_assignments_qa
+UNION
+SELECT
+  item_id,
+  test_e AS test_assignment,
+  (CASE WHEN test_e IS NOT NULL THEN 'test_e'
+  ELSE NULL
+  END) AS test_number,
+  (CASE WHEN test_e IS NOT NULL THEN DATE('2013-01-05')
+  ELSE NULL
+  END) AS test_start_date
+FROM
+  dsv1069.final_assignments_qa
+UNION
+SELECT
+  item_id,
+  test_f AS test_assignment,
+  (CASE WHEN test_f IS NOT NULL THEN 'test_f'
+  ELSE NULL
+  END) AS test_number,
+  (CASE WHEN test_f IS NOT NULL THEN DATE('2013-01-05')
+  ELSE NULL
+  END) AS test_start_date
+FROM
+  dsv1069.final_assignments_qa
+ORDER BY
+  test_number
+LIMIT 100
+
+
+
+
+-- Use this table to 
+-- compute order_binary for the 30 day window after the test_start_date
+-- for the test named item_test_2
+
+
+SELECT
+  test_assignment,
+  COUNT(DISTINCT item_id) AS items,
+  SUM(order_binary_30d) AS order_binary_30d
+FROM
+  (
+  SELECT 
+    final_assignments.item_id,
+    final_assignments.test_assignment,
+    final_assignments.test_start_date,
+    orders_time.created_at,
+    MAX(CASE WHEN (orders_time.created_at > final_assignments.test_start_date
+             AND DATE_PART('day', orders_time.created_at - final_assignments.test_start_date) <= 30) THEN 1
+        ELSE 0
+        END) order_binary_30d
+  FROM 
+    dsv1069.final_assignments
+  LEFT JOIN
+    (
+    SELECT
+      created_at,
+      item_id
+    FROM
+      dsv1069.orders
+    ) orders_time
+  ON
+    final_assignments.item_id = orders_time.item_id
+  WHERE
+    final_assignments.test_number = 'item_test_2'
+  GROUP BY
+    final_assignments.item_id,
+    final_assignments.test_assignment,
+    final_assignments.test_start_date,
+    orders_time.created_at
+  ) order_binary
+GROUP BY
+  test_assignment
+LIMIT 100
+
+
+
+
+-- Use this table to 
+-- compute view_binary for the 30 day window after the test_start_date
+-- for the test named item_test_2
+
+
+SELECT
+  test_assignment,
+  COUNT(item_id) AS items,
+  SUM(view_binary_30d) AS views
+FROM
+  (
+  SELECT
+    final_assignments.item_id,
+    final_assignments.test_assignment,
+    final_assignments.test_start_date,
+    MAX(CASE WHEN (events_view.event_time > final_assignments.test_start_date
+             AND DATE_PART('day', events_view.event_time - final_assignments.test_start_date) <= 30) THEN 1
+        ELSE 0
+        END) view_binary_30d
+  FROM
+    dsv1069.final_assignments
+  LEFT JOIN
+    (
+    SELECT
+      event_time,
+      (CASE WHEN parameter_name = 'item_id' THEN CAST(parameter_value AS NUMERIC)
+      ELSE NULL
+      END) AS item_id
+    FROM
+      dsv1069.events
+    WHERE
+      event_name = 'view_item'
+    ) events_view
+  ON
+    final_assignments.item_id = events_view.item_id
+  WHERE
+    final_assignments.test_number = 'item_test_2'
+  GROUP BY
+    final_assignments.item_id,
+    final_assignments.test_assignment,
+    final_assignments.test_start_date
+  ) view_binary
+GROUP BY
+  test_assignment
+LIMIT 100
